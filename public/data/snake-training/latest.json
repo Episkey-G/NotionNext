@@ -1,0 +1,9 @@
+{
+  "latestFile": "/Users/gurun/NotionNext/public/data/snake-training/training-data-2025-01-05T08-48-40-847Z.json",
+  "timestamp": "2025-01-05T08-48-40-847Z",
+  "convergenceStatus": {
+    "stableEpisodes": 0,
+    "lastAverageReward": null,
+    "hasConverged": false
+  }
+}

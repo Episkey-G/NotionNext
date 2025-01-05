@@ -7,182 +7,181 @@ const Snake = ({
   contributionData,
   onEatCell,
   onReset,
-  totalContributions // 接收总贡献数
+  totalContributions,
+  isRandomMode
 }) => {
   // 使用 ref 存储不需要触发重渲染的状态
   const gameLoopRef = useRef(null)
   const lastUpdateTimeRef = useRef(Date.now())
   const frameRequestRef = useRef(null)
+  const snakePositionRef = useRef({ weekIndex: 0, dayIndex: 0 })
+  const snakeDirectionRef = useRef({ x: 1, y: 0 })
+  const snakeBodyRef = useRef([])
+  const snakeLengthRef = useRef(1)
+  const eatenContributionsRef = useRef(new Set())
+  const validPositionsRef = useRef(new Set())
+  const calculationPromiseRef = useRef(null)
 
-  // 贪吃蛇状态
-  const [snakePosition, setSnakePosition] = useState({ weekIndex: 0, dayIndex: 0 })
-  const [snakeDirection, setSnakeDirection] = useState({ x: 1, y: 0 })
-  const [snakeBody, setSnakeBody] = useState([])
-  const [snakeLength, setSnakeLength] = useState(1)
-  const [eatenContributions, setEatenContributions] = useState(new Set())
-
-  // 初始化时检查是否应该直接进入狂暴状态
+  // 只有需要触发UI更新的状态才使用 useState
   const [isRage, setIsRage] = useState(totalContributions === 0)
+  const [renderTrigger, setRenderTrigger] = useState(0)
+
+  // 添加Q-learning相关的状态
+  const [isTraining, setIsTraining] = useState(false)
+  const [episodeCount, setEpisodeCount] = useState(0)
+  const [totalReward, setTotalReward] = useState(0)
+  const [trainingStats, setTrainingStats] = useState({
+    successRate: 0,
+    averageReward: 0,
+    episodesCompleted: 0
+  })
+  const lastStateRef = useRef(null)
+  const lastActionRef = useRef(null)
+  const qlearningStateRef = useRef(null)
+  const episodeStatsRef = useRef({
+    successCount: 0,
+    totalEpisodeReward: 0
+  })
+
+  // 使用 useCallback 优化函数定义
+  const forceRender = useCallback(() => {
+    setRenderTrigger(prev => prev + 1)
+  }, [])
 
   // 监听贡献状态变化
   useEffect(() => {
     if (totalContributions === 0) {
       setIsRage(true)
-    } else if (eatenContributions.size === totalContributions && totalContributions > 0) {
+    } else if (eatenContributionsRef.current.size === totalContributions && totalContributions > 0) {
       setIsRage(true)
     } else {
       setIsRage(false)
     }
-  }, [totalContributions, eatenContributions.size])
-
-  // 使用 useMemo 缓存计算密集的操作
-  const validPositions = useMemo(() => {
-    const positions = new Set()
-    for (let w = 0; w < yearInfo.totalWeeks; w++) {
-      for (let d = 0; d < 7; d++) {
-        const dataIndex = w * 7 + d - yearInfo.firstDayOfWeek
-        if (dataIndex >= 0 && dataIndex < contributionData.length) {
-          positions.add(`${w}-${d}`)
-        }
-      }
-    }
-    return positions
-  }, [yearInfo.totalWeeks, yearInfo.firstDayOfWeek, contributionData.length])
+  }, [totalContributions])
 
   // 优化碰撞检测
   const checkCollision = useCallback((pos) => {
     const posKey = `${pos.weekIndex}-${pos.dayIndex}`
-    return snakeBody.some(bodyPos => `${bodyPos.weekIndex}-${bodyPos.dayIndex}` === posKey)
-  }, [snakeBody])
+    return snakeBodyRef.current.some(bodyPos => `${bodyPos.weekIndex}-${bodyPos.dayIndex}` === posKey)
+  }, [])
 
   // 优化位置验证
   const isValidPosition = useCallback((pos) => {
-    return validPositions.has(`${pos.weekIndex}-${pos.dayIndex}`)
-  }, [validPositions])
+    return validPositionsRef.current.has(`${pos.weekIndex}-${pos.dayIndex}`)
+  }, [])
 
   // 获取有效的下一个位置（考虑碰撞检测和边界）
   const getNextValidPosition = useCallback((currentPos, direction) => {
-    // 获取所有可能的移动方向
     const possibleDirections = [
       direction,
-      { x: direction.y, y: direction.x }, // 顺时针90度
-      { x: -direction.y, y: -direction.x }, // 逆时针90度
-      { x: -direction.x, y: -direction.y } // 相反方向
+      { x: direction.y, y: direction.x },
+      { x: -direction.y, y: -direction.x },
+      { x: -direction.x, y: -direction.y }
     ]
 
-    // 尝试每个方向，直到找到一个有效位置
-    for (const dir of possibleDirections) {
+    // 过滤出有效的方向
+    const validDirections = possibleDirections.filter(dir => {
       const nextPos = {
         weekIndex: currentPos.weekIndex + dir.x,
         dayIndex: currentPos.dayIndex + dir.y
       }
 
-      // 检查是否超出边界
+      // 检查是否出界
       if (nextPos.weekIndex < 0 || nextPos.weekIndex >= yearInfo.totalWeeks ||
         nextPos.dayIndex < 0 || nextPos.dayIndex >= 7) {
-        continue // 跳过无效位置
+        return false
       }
 
-      // 检查是否在贡献图的有效区域内
-      if (!isValidPosition(nextPos)) {
-        continue // 跳过无效位置
-      }
-
-      // 检查是否会碰到蛇身
+      // 检查是否碰到蛇身
       if (checkCollision(nextPos)) {
-        continue // 跳过碰撞位置
+        return false
       }
 
-      // 找到有效位置，更新方向
-      if (dir !== direction) {
-        setSnakeDirection(dir)
-      }
-      return nextPos
+      return true
+    })
+
+    if (validDirections.length === 0) {
+      return null // 没有有效的移动方向
     }
 
-    // 如果所有方向都无效，返回原位置（蛇会停止移动）
-    return currentPos
-  }, [yearInfo.totalWeeks, checkCollision, isValidPosition])
+    // 在有效方向中选择一个
+    const selectedDirection = validDirections[0]
+    return {
+      weekIndex: currentPos.weekIndex + selectedDirection.x,
+      dayIndex: currentPos.dayIndex + selectedDirection.y,
+      direction: selectedDirection
+    }
+  }, [yearInfo.totalWeeks, checkCollision])
 
   // 随机改变方向
   const changeDirection = useCallback(() => {
     const directions = [
-      { x: 1, y: 0 },  // 右
-      { x: -1, y: 0 }, // 左
-      { x: 0, y: 1 },  // 下
-      { x: 0, y: -1 }  // 上
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 }
     ]
     const randomIndex = Math.floor(Math.random() * directions.length)
-    setSnakeDirection(directions[randomIndex])
+    snakeDirectionRef.current = directions[randomIndex]
   }, [])
 
-  // 寻找最近的贡献格子
-  const findNearestContribution = useCallback((currentPos) => {
-    const searchRadius = 5 // 搜索半径
-    let nearestPos = null
-    let minDistance = Infinity
-    let maxContribution = -1
+  // 使用服务端API进行计算
+  const calculateNextMove = useCallback(async () => {
+    try {
+      // 准备当前状态
+      const currentState = {
+        currentPos: snakePositionRef.current,
+        yearInfo,
+        contributionData,
+        snakeBody: snakeBodyRef.current,
+        snakeLength: snakeLengthRef.current,
+        direction: snakeDirectionRef.current
+      }
 
-    for (let dx = -searchRadius; dx <= searchRadius; dx++) {
-      for (let dy = -searchRadius; dy <= searchRadius; dy++) {
-        let checkPos = {
-          weekIndex: currentPos.weekIndex + dx,
-          dayIndex: currentPos.dayIndex + dy
-        }
+      // 获取有效的下一个位置
+      const nextValidPos = getNextValidPosition(currentState.currentPos, currentState.direction)
+      if (!nextValidPos) {
+        return null
+      }
 
-        // 检查是否在有效范围内
-        if (checkPos.weekIndex < 0 || checkPos.weekIndex >= yearInfo.totalWeeks ||
-          checkPos.dayIndex < 0 || checkPos.dayIndex >= 7 ||
-          !isValidPosition(checkPos)) {
-          continue
-        }
-
-        const contribution = getContributionValue(checkPos.weekIndex, checkPos.dayIndex)
-        // 只寻找有贡献的格子
-        if (contribution > 0) {
-          const distance = Math.sqrt(dx * dx + dy * dy)
-          // 优先选择贡献值更高的格子，其次是距离更近的
-          if (contribution > maxContribution || (contribution === maxContribution && distance < minDistance)) {
-            maxContribution = contribution
-            minDistance = distance
-            nearestPos = checkPos
-          }
+      // 如果不是训练模式，直接返回下一个有效位置
+      if (!isTraining) {
+        return {
+          nextDirection: nextValidPos.direction
         }
       }
-    }
-    return nearestPos
-  }, [yearInfo.totalWeeks, getContributionValue, isValidPosition])
 
-  // 计算移动方向
-  const calculateDirection = useCallback((currentPos, targetPos) => {
-    if (!targetPos) return null
+      // 如果是训练模式，使用Q-learning进行决策
+      const response = await fetch('/api/snake-calculation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentState,
+          validPosition: nextValidPos,
+          lastState: lastStateRef.current,
+          lastAction: lastActionRef.current,
+          isTraining: true
+        })
+      })
 
-    const dx = targetPos.weekIndex - currentPos.weekIndex
-    const dy = targetPos.dayIndex - currentPos.dayIndex
-
-    // 直接使用实际距离，不再处理环绕
-    if (Math.abs(dx) > Math.abs(dy)) {
-      return { x: dx > 0 ? 1 : -1, y: 0 }
-    } else if (dy !== 0) {
-      return { x: 0, y: dy > 0 ? 1 : -1 }
-    }
-    return null
-  }, [])
-
-  // 计算总贡献格数和已吃掉的贡献格数
-  const contributionStats = useMemo(() => {
-    let total = 0
-    for (let w = 0; w < yearInfo.totalWeeks; w++) {
-      for (let d = 0; d < 7; d++) {
-        const contribution = getContributionValue(w, d)
-        if (contribution > 0) total++
+      if (!response.ok) {
+        throw new Error('计算失败')
       }
+
+      const result = await response.json()
+
+      // 保存当前状态用于下一次更新
+      lastStateRef.current = currentState
+      lastActionRef.current = result.nextDirection
+
+      return result
+    } catch (error) {
+      console.error('计算下一步移动时出错:', error)
+      return null
     }
-    return {
-      total,
-      eaten: eatenContributions.size
-    }
-  }, [yearInfo.totalWeeks, getContributionValue, eatenContributions])
+  }, [yearInfo, contributionData, isTraining, getNextValidPosition])
 
   // 重置状态
   const resetSnake = useCallback(() => {
@@ -197,79 +196,149 @@ const Snake = ({
       if (startPos.weekIndex > 0) break
     }
 
-    setSnakePosition(startPos)
-    setSnakeDirection({ x: 1, y: 0 })
-    setSnakeBody([])
-    setSnakeLength(1)
-    setEatenContributions(new Set())
-    // 如果没有贡献，直接进入狂暴状态
+    snakePositionRef.current = startPos
+    snakeDirectionRef.current = { x: 1, y: 0 }
+    snakeBodyRef.current = []
+    snakeLengthRef.current = 1
+    eatenContributionsRef.current = new Set()
     setIsRage(totalContributions === 0)
     onReset?.()
-  }, [yearInfo.totalWeeks, isValidPosition, onReset, totalContributions])
+    forceRender()
+  }, [yearInfo.totalWeeks, isValidPosition, onReset, totalContributions, forceRender])
 
   // 监听激活状态变化
   useEffect(() => {
     if (!isActive) {
-      // 当贪吃蛇被关闭时，重置所有状态
       resetSnake()
     }
   }, [isActive, resetSnake])
 
-  // 使用 requestAnimationFrame 优化动画性能
-  const updateSnakePosition = useCallback(() => {
+  // 更新训练统计信息
+  const updateTrainingStats = useCallback(() => {
+    const { successCount, totalEpisodeReward } = episodeStatsRef.current
+    setTrainingStats({
+      successRate: episodeCount > 0 ? (successCount / episodeCount) * 100 : 0,
+      averageReward: episodeCount > 0 ? totalEpisodeReward / episodeCount : 0,
+      episodesCompleted: episodeCount
+    })
+  }, [episodeCount])
+
+  // 记录训练结果
+  const recordEpisodeResult = useCallback((success, reward) => {
+    if (success) {
+      episodeStatsRef.current.successCount++
+    }
+    episodeStatsRef.current.totalEpisodeReward += reward
+    setEpisodeCount(prev => prev + 1)
+    updateTrainingStats()
+  }, [updateTrainingStats])
+
+  // 开始训练
+  const startTraining = useCallback(() => {
+    setIsTraining(true)
+    setTotalReward(0)
+    episodeStatsRef.current = {
+      successCount: 0,
+      totalEpisodeReward: 0
+    }
+    resetSnake()
+  }, [resetSnake])
+
+  // 停止训练
+  const stopTraining = useCallback(() => {
+    console.log('停止训练')
+    setIsTraining(false)
+    // 重置训练相关状态
+    setEpisodeCount(0)
+    setTotalReward(0)
+    episodeStatsRef.current = {
+      successCount: 0,
+      totalEpisodeReward: 0
+    }
+    // 重置贪吃蛇状态
+    resetSnake()
+  }, [resetSnake])
+
+  // 自动开始训练
+  useEffect(() => {
+    if (isActive) {
+      startTraining()
+    }
+  }, [isActive, startTraining])
+
+  // 更新蛇的位置
+  const updateSnakePosition = useCallback(async () => {
     const currentTime = Date.now()
     const deltaTime = currentTime - lastUpdateTimeRef.current
-    const moveInterval = isRage ? 200 : 300 // 狂暴状态下移动速度提升1.5倍
+    const moveInterval = isRage ? 200 : (isRandomMode ? 50 : 300)
 
     if (deltaTime >= moveInterval) {
-      setSnakePosition(currentPos => {
-        const targetPos = findNearestContribution(currentPos)
-        let newDirection = snakeDirection
+      const calculation = await calculateNextMove()
+      if (!calculation) {
+        if (isTraining) {
+          recordEpisodeResult(false, totalReward)
+        }
+        resetSnake()
+        return
+      }
 
-        if (targetPos) {
-          const calculatedDirection = calculateDirection(currentPos, targetPos)
-          if (calculatedDirection) {
-            const testPos = {
-              weekIndex: currentPos.weekIndex + calculatedDirection.x,
-              dayIndex: currentPos.dayIndex + calculatedDirection.y
-            }
-            if (!checkCollision(testPos)) {
-              newDirection = calculatedDirection
-              setSnakeDirection(calculatedDirection)
-            }
+      const { nextDirection } = calculation
+      if (!nextDirection) {
+        if (isTraining) {
+          recordEpisodeResult(false, totalReward)
+        }
+        resetSnake()
+        return
+      }
+
+      const currentPos = snakePositionRef.current
+      const nextPos = {
+        weekIndex: currentPos.weekIndex + nextDirection.x,
+        dayIndex: currentPos.dayIndex + nextDirection.y
+      }
+
+      // 更新方向
+      snakeDirectionRef.current = nextDirection
+
+      // 检查是否吃到贡献点
+      const contribution = getContributionValue(nextPos.weekIndex, nextPos.dayIndex)
+      if (contribution > 0) {
+        onEatCell?.(nextPos.weekIndex, nextPos.dayIndex)
+        const growthAmount = Math.min(contribution * 2, 8)
+        snakeLengthRef.current = Math.min(snakeLengthRef.current + growthAmount, 30)
+        eatenContributionsRef.current.add(`${nextPos.weekIndex}-${nextPos.dayIndex}`)
+
+        if (isTraining) {
+          setTotalReward(prev => prev + contribution * 10)
+          if (eatenContributionsRef.current.size === totalContributions) {
+            recordEpisodeResult(true, totalReward)
+            resetSnake()
+            return
           }
-        } else if (Math.random() < 0.2) {
-          changeDirection()
         }
+      }
 
-        const nextPos = getNextValidPosition(currentPos, newDirection)
-
-        if (nextPos.weekIndex === currentPos.weekIndex && nextPos.dayIndex === currentPos.dayIndex) {
-          resetSnake()
-          return { weekIndex: 0, dayIndex: 0 }
-        }
-
-        const contribution = getContributionValue(nextPos.weekIndex, nextPos.dayIndex)
-        if (contribution > 0) {
-          onEatCell?.(nextPos.weekIndex, nextPos.dayIndex)
-          const growthAmount = Math.min(contribution * 2, 8)
-          setSnakeLength(prev => Math.min(prev + growthAmount, 30))
-          // 记录吃掉的贡献格
-          setEatenContributions(prev => new Set([...prev, `${nextPos.weekIndex}-${nextPos.dayIndex}`]))
-        }
-
-        setSnakeBody(prev => {
-          const newBody = [...prev, currentPos]
-          return newBody.slice(-snakeLength)
-        })
-
-        lastUpdateTimeRef.current = currentTime
-        return nextPos
-      })
+      // 更新蛇身
+      snakeBodyRef.current = [...snakeBodyRef.current, currentPos].slice(-snakeLengthRef.current)
+      snakePositionRef.current = nextPos
+      lastUpdateTimeRef.current = currentTime
+      forceRender()
     }
 
     frameRequestRef.current = requestAnimationFrame(updateSnakePosition)
-  }, [snakeDirection, getNextValidPosition, changeDirection, findNearestContribution, calculateDirection, getContributionValue, snakeLength, checkCollision, resetSnake, onEatCell, isRage])
+  }, [
+    isRage,
+    isTraining,
+    isRandomMode,
+    calculateNextMove,
+    getContributionValue,
+    onEatCell,
+    resetSnake,
+    forceRender,
+    totalReward,
+    totalContributions,
+    recordEpisodeResult
+  ])
 
   // 优化动画循环
   useEffect(() => {
@@ -280,22 +349,27 @@ const Snake = ({
       if (frameRequestRef.current) {
         cancelAnimationFrame(frameRequestRef.current)
       }
+      // 取消正在进行的计算
+      if (calculationPromiseRef.current) {
+        calculationPromiseRef.current.abort()
+      }
     }
   }, [isActive, updateSnakePosition])
 
   // 优化蛇身样式计算
   const getSnakeBodyStyle = useCallback((weekIndex, dayIndex) => {
-    const bodyIndex = snakeBody.findIndex(pos => pos.weekIndex === weekIndex && pos.dayIndex === dayIndex)
+    const bodyIndex = snakeBodyRef.current.findIndex(pos =>
+      pos.weekIndex === weekIndex && pos.dayIndex === dayIndex
+    )
     if (bodyIndex === -1) return null
 
-    const progress = 1 - bodyIndex / snakeLength
+    const progress = 1 - bodyIndex / snakeLengthRef.current
     const opacity = 0.3 + progress * 0.7
     const scale = 1 + progress * 0.15
 
-    // 计算每个身体部分的旋转角度
-    const rotateAngle = Math.sin((Date.now() / 200) + bodyIndex * 0.5) * (8 - bodyIndex * 0.5)
+    // 使用缓存的时间戳减少 Date.now() 调用
+    const rotateAngle = Math.sin((lastUpdateTimeRef.current / 200) + bodyIndex * 0.5) * (8 - bodyIndex * 0.5)
 
-    // 狂暴状态下使用血红色，否则使用黄色
     const baseStyle = isRage
       ? 'snake-body rage'
       : `bg-yellow-${Math.floor(300 + progress * 200)}/80 dark:bg-yellow-${Math.floor(400 + progress * 100)}/80 snake-body`
@@ -312,17 +386,40 @@ const Snake = ({
       '--pulse-speed': isRage ? '0.4s' : '0.8s',
       isRage
     }
-  }, [snakeBody, snakeLength, isRage])
+  }, [isRage])
+
+  // 更新训练状态
+  useEffect(() => {
+    console.log('随机模式状态变化:', isRandomMode)
+    if (isRandomMode) {
+      // 在随机模式下开始训练
+      console.log('开始训练')
+      startTraining()
+    } else {
+      // 在非随机模式下暂停训练
+      console.log('停止训练')
+      stopTraining()
+    }
+  }, [isRandomMode, startTraining, stopTraining])
 
   return {
-    snakePosition,
+    snakePosition: snakePositionRef.current,
     getSnakeBodyStyle,
     isSnakeHead: (weekIndex, dayIndex) => (
-      isActive && snakePosition.weekIndex === weekIndex && snakePosition.dayIndex === dayIndex
+      isActive && snakePositionRef.current.weekIndex === weekIndex && snakePositionRef.current.dayIndex === dayIndex
     ),
     reset: resetSnake,
     isActive,
     isRage,
+    // 添加训练相关的控制接口和统计信息
+    training: {
+      isTraining,
+      episodeCount,
+      totalReward,
+      stats: trainingStats,
+      startTraining,
+      stopTraining
+    },
     styles: `
       @keyframes snakeHead {
         0% { 
@@ -473,6 +570,7 @@ const Snake = ({
           background: #ff3333;
         }
       }
+
       .snake-head {
         transform-style: preserve-3d;
         animation: snakeHead 0.6s ease-in-out infinite;

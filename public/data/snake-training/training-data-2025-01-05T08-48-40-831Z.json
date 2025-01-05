@@ -1,0 +1,75 @@
+{
+  "qTable": [
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[0,0,0,1]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[0,0,0,0]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[0,0,1,0]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[0,1,0,1]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[0,1,0,0]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[0,0,1,1]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[1,0,1,0]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[1,0,0,1]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[0,1,1,0]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[1,0,1,1]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[1,1,0,0]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[1,1,0,1]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"surroundings\":[1,0,0,0]}",
+      {}
+    ],
+    [
+      "{\"relativeDirection\":{\"x\":0,\"y\":0},\"distance\":10,\"surroundings\":[0,1,0,0],\"bodyLength\":1}",
+      {}
+    ]
+  ],
+  "learningRate": 0.1,
+  "discountFactor": 0.9,
+  "explorationRate": 0.1,
+  "timestamp": "2025-01-05T08-48-40-831Z",
+  "stats": {
+    "episodeCount": 0,
+    "rewardHistory": [],
+    "stateCount": 14,
+    "totalActions": 1,
+    "convergenceStatus": {
+      "stableEpisodes": 0,
+      "lastAverageReward": null,
+      "hasConverged": false
+    }
+  }
+}
