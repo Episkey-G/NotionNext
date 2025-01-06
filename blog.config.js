@@ -5,13 +5,13 @@ const BLOG = {
   NOTION_PAGE_ID:
     process.env.NOTION_PAGE_ID ||
     '02ab3b8678004aa69e9e415905ef32a5,en:7c1d570661754c8fbc568e00a01fd70e',
-  THEME: process.env.NEXT_PUBLIC_THEME || 'simple', // 当前主题，在themes文件夹下可找到所有支持的主题；主题名称就是文件夹名，例如 example,fukasawa,gitbook,heo,hexo,landing,matery,medium,next,nobelium,plog,simple
+  THEME: process.env.NEXT_PUBLIC_THEME || 'heo', // 当前主题，在themes文件夹下可找到所有支持的主题；主题名称就是文件夹名，例如 example,fukasawa,gitbook,heo,hexo,landing,matery,medium,next,nobelium,plog,simple
   LANG: process.env.NEXT_PUBLIC_LANG || 'zh-CN', // e.g 'zh-CN','en-US'  see /lib/lang.js for more.
-  SINCE: process.env.NEXT_PUBLIC_SINCE || 2021, // e.g if leave this empty, current year will be used.
+  SINCE: process.env.NEXT_PUBLIC_SINCE || 2024, // e.g if leave this empty, current year will be used.
 
-  PSEUDO_STATIC: process.env.NEXT_PUBLIC_PSEUDO_STATIC || false, // 伪静态路径，开启后所有文章URL都以 .html 结尾。
+  PSEUDO_STATIC: process.env.NEXT_PUBLIC_PSEUDO_STATIC || true, // 伪静态路径，开启后所有文章URL都以 .html 结尾。
   NEXT_REVALIDATE_SECOND: process.env.NEXT_PUBLIC_REVALIDATE_SECOND || 5, // 更新缓存间隔 单位(秒)；即每个页面有5秒的纯静态期、此期间无论多少次访问都不会抓取notion数据；调大该值有助于节省Vercel资源、同时提升访问速率，但也会使文章更新有延迟。
-  APPEARANCE: process.env.NEXT_PUBLIC_APPEARANCE || 'light', // ['light', 'dark', 'auto'], // light 日间模式 ， dark夜间模式， auto根据时间和主题自动夜间模式
+  APPEARANCE: process.env.NEXT_PUBLIC_APPEARANCE || 'auto', // ['light', 'dark', 'auto'], // light 日间模式 ， dark夜间模式， auto根据时间和主题自动夜间模式
   APPEARANCE_DARK_TIME: process.env.NEXT_PUBLIC_APPEARANCE_DARK_TIME || [18, 6], // 夜间模式起至时间，false时关闭根据时间自动切换夜间模式
 
   AUTHOR: process.env.NEXT_PUBLIC_AUTHOR || 'Episkey.gu', // 您的昵称 例如 tangly1024
@@ -64,7 +64,48 @@ const BLOG = {
     'Hi，我是一个程序员, Hi，我是一个打工人,Hi，我是一个干饭人,欢迎来到我的博客🎉',
 
   // uuid重定向至 slug
-  UUID_REDIRECT: process.env.UUID_REDIRECT || false
+  UUID_REDIRECT: process.env.UUID_REDIRECT || false,
+
+  // 宠物配置
+  PET: {
+    // 初始属性
+    INITIAL_STATE: {
+      level: 1,
+      exp: 0,
+      mood: 100,
+      energy: 100
+    },
+    // 升级所需经验值系数
+    LEVEL_UP_EXP_FACTOR: 100,
+    // 经验值获取系数
+    EXP_GAIN_FACTOR: {
+      CREATE: 10, // 创建文章
+      UPDATE: 5,  // 更新文章
+      DAILY_BONUS: 20 // 每日登录奖励
+    },
+    // 状态变化系数
+    STATUS_CHANGE: {
+      MOOD_DECAY: 0.1,    // 心情衰减速度
+      ENERGY_DECAY: 0.1,  // 能量衰减速度
+      SLEEP_RECOVER: 0.5, // 睡眠恢复速度
+      FEED_RECOVER: 20,   // 喂食恢复量
+      PLAY_MOOD_BOOST: 10 // 玩耍心情提升
+    },
+    // 宠物外观
+    APPEARANCE: {
+      DEFAULT_COLOR: 'yellow-300',
+      HAPPY_COLOR: 'emerald-400',
+      SLEEP_COLOR: 'blue-300',
+      TIRED_COLOR: 'gray-400'
+    },
+    // 成就系统
+    ACHIEVEMENTS: {
+      LEVEL_MILESTONES: [5, 10, 20, 50, 100],
+      CONTRIBUTION_MILESTONES: [10, 50, 100, 500, 1000],
+      MOOD_MILESTONES: [1000, 5000, 10000],
+      ENERGY_MILESTONES: [1000, 5000, 10000]
+    }
+  }
 }
 
 module.exports = BLOG

@@ -484,13 +484,22 @@ const About = props => {
       <div className="max-w-[1200px] w-full px-5 relative">
         <div className="py-10">
           {/* 头像和技能标签区 */}
-          <div className="flex justify-center items-center gap-6 mb-12">
-            {/* 左侧标签 */}
-            <div className="flex flex-col gap-3">
+          <div className="flex justify-center items-center gap-2 md:gap-6 mb-12">
+            {/* 左侧标签组 */}
+            <div className="flex flex-col gap-2 md:gap-3">
               {leftTags.map((tag, index) => (
                 <div
                   key={`left-${index}`}
-                  className={`${bgColors[index]} text-white px-4 py-2 rounded-full text-sm shadow-md hover:scale-105 transition-transform duration-200 animate-float-delay-${index + 1}`}
+                  className={`${bgColors[index]} text-white px-4 py-2 rounded-full text-sm shadow-md hover:scale-105 transition-transform duration-200 animate-float-delay-${index + 1} hidden md:block`}
+                >
+                  {tag}
+                </div>
+              ))}
+              {/* 移动端左侧标签 - 垂直排列 */}
+              {leftTags.map((tag, index) => (
+                <div
+                  key={`mobile-left-${index}`}
+                  className={`${bgColors[index]} text-white px-3 py-1.5 rounded-full text-xs shadow-md hover:scale-105 transition-transform duration-200 animate-float-delay-${index + 1} md:hidden whitespace-nowrap`}
                 >
                   {tag}
                 </div>
@@ -498,20 +507,29 @@ const About = props => {
             </div>
 
             {/* 头像 */}
-            <div>
+            <div className="relative">
               <img
                 src="/images/touxiang.png"
                 alt="avatar"
-                className="w-[180px] h-[180px] rounded-full border-4 border-white shadow-lg"
+                className="w-[100px] h-[100px] md:w-[180px] md:h-[180px] rounded-full border-4 border-white shadow-lg"
               />
             </div>
 
-            {/* 右侧标签 */}
-            <div className="flex flex-col gap-3">
+            {/* 右侧标签组 */}
+            <div className="flex flex-col gap-2 md:gap-3">
               {rightTags.map((tag, index) => (
                 <div
                   key={`right-${index}`}
-                  className={`${bgColors[index + 2]} text-white px-4 py-2 rounded-full text-sm shadow-md hover:scale-105 transition-transform duration-200 animate-float-delay-${index + 3}`}
+                  className={`${bgColors[index + 2]} text-white px-4 py-2 rounded-full text-sm shadow-md hover:scale-105 transition-transform duration-200 animate-float-delay-${index + 3} hidden md:block`}
+                >
+                  {tag}
+                </div>
+              ))}
+              {/* 移动端右侧标签 - 垂直排列 */}
+              {rightTags.map((tag, index) => (
+                <div
+                  key={`mobile-right-${index}`}
+                  className={`${bgColors[index + 2]} text-white px-3 py-1.5 rounded-full text-xs shadow-md hover:scale-105 transition-transform duration-200 animate-float-delay-${index + 3} md:hidden whitespace-nowrap`}
                 >
                   {tag}
                 </div>
@@ -531,9 +549,9 @@ const About = props => {
           <GitHubContributionCard posts={props.allPosts || []} />
 
           {/* 个人介绍卡片区域 - 两列布局 */}
-          <div className="grid grid-cols-2 gap-6 mb-8 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full">
             {/* 左侧介绍卡片 */}
-            <div className="bg-gradient-to-br from-[#4B6EFF] via-[#45B4FF] to-[#4B6EFF] text-white rounded-2xl p-8 shadow-lg transform hover:scale-[1.01] transition-all duration-200 hover:shadow-xl h-[200px]">
+            <div className="bg-gradient-to-br from-[#4B6EFF] via-[#45B4FF] to-[#4B6EFF] text-white rounded-2xl p-8 shadow-lg transform hover:scale-[1.01] transition-all duration-200 hover:shadow-xl h-auto md:h-[200px]">
               <div className="flex items-center mb-4">
                 <span className="text-xl">👋</span>
                 <p className="ml-2 text-lg">你好，很高兴认识你</p>
@@ -543,7 +561,7 @@ const About = props => {
             </div>
 
             {/* 右侧标签卡片 */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-200 relative overflow-hidden h-[200px]">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-200 relative overflow-hidden h-auto md:h-[200px]">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-purple-500/10 blur-2xl transform rotate-45"></div>
               <div className="flex flex-col h-full">
                 <h3 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">追求</h3>
@@ -569,7 +587,7 @@ const About = props => {
           </div>
 
           {/* 技能特长和生涯进度区域 */}
-          <div className="grid grid-cols-2 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
             {/* 左侧技能特长卡片 */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg overflow-hidden">
               <div className="mb-6">
@@ -686,7 +704,7 @@ const About = props => {
           </div>
 
           {/* 访问统计和地理位置区域 */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 访问统计卡片 */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-lg relative overflow-hidden group transition-all duration-300">
               {/* 背景装饰 */}
@@ -720,7 +738,7 @@ const About = props => {
                 <div className="grid grid-cols-2 gap-4">
                   {/* 今日人数 */}
                   <div className="group/card bg-gradient-to-br from-white/80 to-white/40 dark:from-white/10 dark:to-white/5 backdrop-blur-lg rounded-xl p-3 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border border-gray-100/20 dark:border-white/10">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                       <div className="p-1.5 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
                         <svg className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" viewBox="0 0 24 24" fill="none">
                           <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -848,7 +866,7 @@ const About = props => {
 
                 {/* 内容区域 */}
                 <div className="relative z-10">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
                     {/* 出生年份 */}
                     <div className="space-y-1">
                       <div className="text-xs text-gray-500 dark:text-gray-400">生于</div>
